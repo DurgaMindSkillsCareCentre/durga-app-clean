@@ -1,87 +1,94 @@
 import streamlit as st
 import urllib.parse
-import random
+import google.generativeai as genai
 
+# ========= CONFIG =========
 WHATSAPP_NUMBER = "917395944527"
+genai.configure(api_key="AIzaSyDxCc-S2vj9vBKZnUSLd-O45rij0_Sz0lQ")  # 🔴 ADD YOUR KEY
 
-st.set_page_config(page_title="Durga Psychiatric Centre", page_icon="")
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+st.set_page_config(page_title="Durga Psychiatric Centre", page_icon="🧠")
 
 # ========= SESSION =========
-if "history" not in st.session_state:
-    st.session_state.history = []
+if "chat" not in st.session_state:
+    st.session_state.chat = model.start_chat(history=[])
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 # ========= HEADER =========
-st.title(" Durga Psychiatric Centre")
-st.write("Confidential Mental Health Support")
+st.title("🧠 Durga Psychiatric Centre")
+st.write("Confidential AI Mental Health Assistant")
 
 st.markdown("---")
 
-# ========= CHATBOT =========
-st.subheader(" Talk to our Assistant")
+# ========= CHAT =========
+st.subheader("💬 Talk to our AI Assistant")
 
-def bot_reply(text):
-    text = text.lower()
-
-    if "stress" in text:
-        return random.choice([
-            "I understand you're feeling stressed. Is it work-related or personal?",
-            "Stress can feel overwhelming. What seems to be causing it?",
-            "Can you tell me more about your stress?"
-        ])
-
-    elif "anxiety" in text:
-        return random.choice([
-            "Anxiety can feel intense. When do you feel it the most?",
-            "You're not alone. Can you describe your anxiety?",
-        ])
-
-    elif "depression" in text:
-        return "I'm sorry you're feeling this way. How long have you been experiencing this?"
-
-    else:
-        return "I'm here to listen. Can you tell me more?"
-
-# Chat input
 with st.form("chat_form", clear_on_submit=True):
-    user_input = st.text_area("Tell me what you're feeling:")
+    user_input = st.text_area(
+        "Tell me what you're feeling:",
+        placeholder="Example: I feel stressed due to work pressure"
+    )
     submit = st.form_submit_button("Send")
 
 if submit and user_input:
-    st.session_state.history.append(("You", user_input))
-    reply = bot_reply(user_input)
-    st.session_state.history.append(("Assistant", reply))
+
+    prompt = f"""
+You are a compassionate mental health assistant.
+
+Rules:
+- Be empathetic and supportive
+- Ask gentle follow-up questions
+- Do NOT diagnose or give medical advice
+- Keep answers short (2-3 sentences)
+- Encourage professional consultation
+
+User: {user_input}
+"""
+
+    response = st.session_state.chat.send_message(prompt)
+    reply = response.text
+
+    st.session_state.messages.append(("You", user_input))
+    st.session_state.messages.append(("Assistant", reply))
+
     st.rerun()
 
-# Display chat
-for role, msg in st.session_state.history:
+# ========= DISPLAY CHAT =========
+for role, msg in st.session_state.messages:
     st.write(f"**{role}:** {msg}")
 
-# ========= FORM =========
+# ========= CONSULTATION FORM =========
 st.markdown("---")
-st.subheader(" Book a Consultation")
+st.subheader("📅 Book a Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
-issue = st.selectbox("Concern", ["Stress", "Anxiety", "Depression", "Relationship", "Addiction", "Other"])
+issue = st.selectbox(
+    "Concern",
+    ["Stress", "Anxiety", "Depression", "Relationship", "Addiction", "Other"]
+)
 
-# ========= WHATSAPP FLOW =========
-if st.button(" Open WhatsApp"):
+# ========= WHATSAPP BUTTON =========
+if name and phone:
 
-    if not name or not phone:
-        st.error("Please fill all details")
-    else:
-        message = f"""Hello, I would like to book a consultation.
+    message = f"""Hello, I would like to book a consultation.
 
 Name: {name}
 Phone: {phone}
 Concern: {issue}
 """
 
-        encoded = urllib.parse.quote(message)
-        wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded}"
+    encoded_message = urllib.parse.quote(message)
+    wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded_message}"
 
-        st.success("Tap below to open WhatsApp")
-        st.link_button(" Open WhatsApp Chat", wa_link)
+    st.markdown("### 👉 Continue to WhatsApp")
+    st.link_button("🚀 Open WhatsApp", wa_link)
+
+else:
+    st.info("Please enter Name and Phone Number to proceed")
 
 # ========= FOOTER =========
 st.caption("Your information is confidential.")
